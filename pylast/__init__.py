@@ -32,11 +32,14 @@ import warnings
 import re
 import six
 
-__version__ = '1.8.0'
-__author__ = 'Amr Hassan, hugovk'
-__copyright__ = "Copyright (C) 2008-2010 Amr Hassan, 2013-2017 hugovk"
-__license__ = "apache2"
+__version__ = '1.8.1'
+__author__ = 'Amr Hassan, hugovk, Mice Pápai'
+__copyright__ = ('Copyright (C) 2008-2010 Amr Hassan, 2013-2017 hugovk, '
+                 '2017 Mice Pápai')
+__license__ = 'apache2'
 __email__ = 'amr.hassan@gmail.com'
+
+DEBUG = True
 
 
 def _deprecation_warning(message):
@@ -3310,6 +3313,19 @@ class User(_BaseObject, _Chartable):
         self._recommended_events_index = 0
         self._recommended_artists_index = 0
 
+        if DEBUG:
+            # Testing if these are really no longer supported
+            # TODO: find a better place for this
+            gender = self._get_gender()
+            if gender in {USER_MALE, USER_FEMALE}:
+                raise Exception('{}: {} gender found'.format(self.name,
+                                                             gender))
+
+            age = self._get_age()
+            if age:
+                raise Exception('{}: {} age found'.format(self.name,
+                                                          age))
+
     def __repr__(self):
         return "pylast.User(%s, %s)" % (repr(self.name), repr(self.network))
 
@@ -3427,7 +3443,10 @@ class User(_BaseObject, _Chartable):
 
         return seq
 
-    def get_neighbours(self, limit=50, cacheable=True):
+    def get_neighbours(self):
+        raise DeprecationWarning('get_neighbours() is no longer supported')
+
+    def _get_neighbours(self, limit=50, cacheable=True):
         """Returns a list of the user's friends."""
 
         params = self._get_params()
@@ -3580,6 +3599,10 @@ class User(_BaseObject, _Chartable):
             return Country(country, self.network)
 
     def get_age(self):
+        _deprecation_warning('get_age() is no longer supported')
+        return 0
+
+    def _get_age(self):
         """Returns the user's age."""
 
         doc = self._request(self.ws_prefix + ".getInfo", True)
@@ -3587,9 +3610,16 @@ class User(_BaseObject, _Chartable):
         return _number(_extract(doc, "age"))
 
     def get_gender(self):
+        _deprecation_warning('get_gender() is no longer supported')
+        return None
+
+    def _get_gender(self):
         """Returns the user's gender. Either USER_MALE or USER_FEMALE."""
 
         doc = self._request(self.ws_prefix + ".getInfo", True)
+
+        # debug
+        # print(doc.toprettyxml())
 
         value = _extract(doc, "gender")
 
@@ -3730,7 +3760,8 @@ class User(_BaseObject, _Chartable):
 
     def get_top_tracks(
             self, period=PERIOD_OVERALL, limit=None, cacheable=True):
-        """Returns the top tracks played by a user.
+        """
+        Returns the top tracks played by a user.
         * period: The period of time. Possible values:
           o PERIOD_OVERALL
           o PERIOD_7DAYS
@@ -3783,6 +3814,8 @@ class User(_BaseObject, _Chartable):
 
     def get_image(self):
         """Returns the user's avatar."""
+
+        # TODO: size parameter (small, medium, large, extralarge)
 
         doc = self._request(self.ws_prefix + ".getInfo", True)
 
