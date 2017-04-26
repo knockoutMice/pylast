@@ -33,7 +33,7 @@ import warnings
 import re
 import six
 
-__version__ = '1.8.2'
+__version__ = '1.8.3'
 __author__ = 'Amr Hassan, hugovk, Mice Pápai'
 __copyright__ = ('Copyright (C) 2008-2010 Amr Hassan, 2013-2017 hugovk, '
                  '2017 Mice Pápai')
@@ -94,16 +94,16 @@ STATUS_INVALID_SIGNATURE = 13
 STATUS_TOKEN_UNAUTHORIZED = 14
 STATUS_TOKEN_EXPIRED = 15
 
-EVENT_ATTENDING = '0'
-EVENT_MAYBE_ATTENDING = '1'
-EVENT_NOT_ATTENDING = '2'
+ATTENDING = '0'
+MAYBE_ATTENDING = '1'
+NOT_ATTENDING = '2'
 
-PERIOD_OVERALL = 'overall'
-PERIOD_7DAYS = '7day'
-PERIOD_1MONTH = '1month'
-PERIOD_3MONTHS = '3month'
-PERIOD_6MONTHS = '6month'
-PERIOD_12MONTHS = '12month'
+_OVERALL = 'overall'
+_7DAYS = '7day'
+_1MONTH = '1month'
+_3MONTHS = '3month'
+_6MONTHS = '6month'
+_12MONTHS = '12month'
 
 DOMAIN_ENGLISH = 0
 DOMAIN_GERMAN = 1
@@ -127,8 +127,8 @@ COVER_MEGA = 4
 IMAGES_ORDER_POPULARITY = "popularity"
 IMAGES_ORDER_DATE = "dateadded"
 
-USER_MALE = 'Male'
-USER_FEMALE = 'Female'
+MALE = 'Male'
+FEMALE = 'Female'
 
 SCROBBLE_SOURCE_USER = "P"
 SCROBBLE_SOURCE_NON_PERSONALIZED_BROADCAST = "R"
@@ -1000,8 +1000,8 @@ class _Request(object):
     def __init__(self, network, method_name, params={}):
 
         self.network = network
-        self.params = {}
 
+        self.params = {}
         for key in params:
             self.params[key] = _unicode(params[key])
 
@@ -3228,7 +3228,7 @@ class User(_BaseObject, _Chartable):
             # Testing if these are really no longer supported
             # TODO: find a better place for this
             gender = self._get_gender()
-            if gender in {USER_MALE, USER_FEMALE}:
+            if gender in {MALE, FEMALE}:
                 raise Exception('{}: {} gender found'.format(self.name,
                                                              gender))
 
@@ -3267,6 +3267,12 @@ class User(_BaseObject, _Chartable):
                 self._request(self.ws_prefix + ".getInfo", True), "name")
 
         return self.name
+
+    def get_real_name(self):
+        """Returns the user name."""
+
+        return _extract(self._request(self.ws_prefix + '.getInfo', True),
+                        'realname')
 
     def get_upcoming_events(self):
         """Returns all the upcoming events for this user."""
@@ -3535,9 +3541,9 @@ class User(_BaseObject, _Chartable):
         value = _extract(doc, "gender")
 
         if value == 'm':
-            return USER_MALE
+            return MALE
         elif value == 'f':
-            return USER_FEMALE
+            return FEMALE
 
         return None
 
@@ -3606,7 +3612,7 @@ class User(_BaseObject, _Chartable):
         return _extract_tracks(doc, self.network)
 
     def get_top_albums(
-            self, period=PERIOD_OVERALL, limit=None, cacheable=True):
+            self, period=_OVERALL, limit=None, cacheable=True):
         """Returns the top albums played by a user.
         * period: The period of time. Possible values:
           o PERIOD_OVERALL
@@ -3627,7 +3633,7 @@ class User(_BaseObject, _Chartable):
 
         return _extract_top_albums(doc, self.network)
 
-    def get_top_artists(self, period=PERIOD_OVERALL, limit=None):
+    def get_top_artists(self, period=_OVERALL, limit=None):
         """Returns the top artists played by a user.
         * period: The period of time. Possible values:
           o PERIOD_OVERALL
@@ -3670,7 +3676,7 @@ class User(_BaseObject, _Chartable):
         return seq
 
     def get_top_tracks(
-            self, period=PERIOD_OVERALL, limit=None, cacheable=True):
+            self, period=_OVERALL, limit=None, cacheable=True):
         """
         Returns the top tracks played by a user.
         * period: The period of time. Possible values:
@@ -3776,8 +3782,13 @@ class AuthenticatedUser(User):
     def _get_params(self):
         return {"user": self.get_name()}
 
-    def get_name(self):
-        """Returns the name of the authenticated user."""
+    def get_name(self, properly_capitalized=False):
+        """
+        Returns the name of the authenticated user.
+        """
+
+        if self.name and not properly_capitalized:
+            return self.name
 
         doc = self._request("user.getInfo", True, {"user": ""})    # hack
 
