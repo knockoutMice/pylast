@@ -22,6 +22,7 @@
 # https://github.com/pylast/pylast
 
 import hashlib
+from functools import wraps
 from xml.dom import minidom, Node
 import xml.dom
 import time
@@ -33,18 +34,39 @@ import warnings
 import re
 import six
 
-__version__ = '1.8.3'
+__version__ = '1.8.4'
 __author__ = 'Amr Hassan, hugovk, Mice Pápai'
 __copyright__ = ('Copyright (C) 2008-2010 Amr Hassan, 2013-2017 hugovk, '
                  '2017 Mice Pápai')
 __license__ = 'apache2'
 __email__ = 'amr.hassan@gmail.com'
 
-DEBUG = True
+DEBUG = False
+
+if DEBUG:
+    warnings.simplefilter('always')
+else:
+    warnings.simplefilter('ignore')
 
 
 def _deprecation_warning(message):
     warnings.warn(message, DeprecationWarning)
+
+
+def deprecated(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        name = func.__name__
+        _deprecation_warning(f'{name} is no longer supported')
+        return func(*args, **kwargs)
+    return wrapper
+
+
+def deprecated_class(cls):
+    for attr in cls.__dict__:
+        if callable(getattr(cls, attr)):
+            setattr(cls, attr, deprecated(getattr(cls, attr)))
+    return cls
 
 
 def _can_use_ssl_securely():
@@ -376,6 +398,7 @@ class _Network(object):
 
         self.last_call_time = now
 
+    @deprecated
     def create_new_playlist(self, title, description):
         """
             Creates a playlist for the authenticated user and returns it
@@ -441,6 +464,7 @@ class _Network(object):
 
         return seq
 
+    @deprecated
     def get_geo_events(
             self, longitude=None, latitude=None, location=None, distance=None,
             tag=None, festivalsonly=None, limit=None, cacheable=True):
@@ -485,6 +509,7 @@ class _Network(object):
 
         return _extract_events_from_doc(doc, self)
 
+    @deprecated
     def get_metro_weekly_chart_dates(self, cacheable=True):
         """
         Returns a list of From and To tuples for the available metro charts.
@@ -498,6 +523,7 @@ class _Network(object):
 
         return seq
 
+    @deprecated
     def get_metros(self, country=None, cacheable=True):
         """
         Get a list of valid countries and metros for use in the other
@@ -659,6 +685,7 @@ class _Network(object):
 
         return TrackSearch(artist_name, track_name, self)
 
+    @deprecated
     def search_for_venue(self, venue_name, country_name):
         """Searches of a venue by its name and its country. Set country_name to
         an empty string if not available.
@@ -806,6 +833,7 @@ class _Network(object):
         if remaining_tracks:
             self.scrobble_many(remaining_tracks)
 
+    @deprecated
     def get_play_links(self, link_type, things, cacheable=True):
         method = link_type + ".getPlaylinks"
         params = {}
@@ -830,12 +858,15 @@ class _Network(object):
 
         return seq
 
+    @deprecated
     def get_artist_play_links(self, artists, cacheable=True):
         return self.get_play_links("artist", artists, cacheable)
 
+    @deprecated
     def get_album_play_links(self, albums, cacheable=True):
         return self.get_play_links("album", albums, cacheable)
 
+    @deprecated
     def get_track_play_links(self, tracks, cacheable=True):
         return self.get_play_links("track", tracks, cacheable)
 
@@ -1165,6 +1196,7 @@ class _Request(object):
             status = e.getAttribute('code')
             details = e.firstChild.data.strip()
             raise WSError(self.network, status, details)
+            # TODO: more useful error message (with request params)
 
 
 class SessionKeyGenerator(object):
@@ -1357,6 +1389,7 @@ class _BaseObject(object):
 
         return seq
 
+    @deprecated
     def get_top_fans(self, limit=None, cacheable=True):
         """Returns a list of the Users who played this the most.
         # Parameters:
@@ -1450,6 +1483,7 @@ class _BaseObject(object):
 
         return _extract(node, section)
 
+    @deprecated
     def get_shouts(self, limit=50, cacheable=False):
         """
             Returns a sequence of Shout objects
@@ -1496,6 +1530,7 @@ class _Chartable(object):
         """
         return self.get_weekly_charts("album", from_date, to_date)
 
+    # @deprecated
     def get_weekly_artist_charts(self, from_date=None, to_date=None):
         """
         Returns the weekly artist charts for the week starting from the
@@ -1847,6 +1882,7 @@ class Album(_Opus):
     def __init__(self, artist, title, network, username=None):
         super(Album, self).__init__(artist, title, network, "album", username)
 
+    @deprecated
     def get_release_date(self):
         """Returns the release date of the album."""
 
@@ -2042,6 +2078,7 @@ class Artist(_BaseObject, _Taggable):
         """Returns the content of the artist's biography."""
         return self.get_bio("content", language)
 
+    @deprecated
     def get_upcoming_events(self):
         """Returns a list of the upcoming Events for this artist."""
 
@@ -2119,6 +2156,7 @@ class Artist(_BaseObject, _Taggable):
 
         self._request("artist.Shout", False, params)
 
+    @deprecated
     def get_band_members(self):
         """Returns a list of band members or None if unknown."""
 
@@ -2130,7 +2168,7 @@ class Artist(_BaseObject, _Taggable):
 
         return names
 
-
+@deprecated_class
 class Event(_BaseObject):
     """An event."""
 
@@ -2383,7 +2421,7 @@ class Country(_BaseObject):
         return self.network._get_url(
             domain_name, "country") % {'country_name': country_name}
 
-
+# @deprecated_class ?
 class Metro(_BaseObject):
     """A metro at Last.fm."""
 
@@ -2581,6 +2619,7 @@ class Library(_BaseObject):
 
         return self.user
 
+    @deprecated
     def add_album(self, album):
         """Add an album to this library."""
 
@@ -2590,6 +2629,7 @@ class Library(_BaseObject):
 
         self._request("library.addAlbum", False, params)
 
+    @deprecated
     def remove_album(self, album):
         """Remove an album from this library."""
 
@@ -2599,6 +2639,7 @@ class Library(_BaseObject):
 
         self._request(self.ws_prefix + ".removeAlbum", False, params)
 
+    @deprecated
     def add_artist(self, artist):
         """Add an artist to this library."""
 
@@ -2610,6 +2651,7 @@ class Library(_BaseObject):
 
         self._request(self.ws_prefix + ".addArtist", False, params)
 
+    @deprecated
     def remove_artist(self, artist):
         """Remove an artist from this library."""
 
@@ -2629,6 +2671,7 @@ class Library(_BaseObject):
 
         self._request(self.ws_prefix + ".addTrack", False, params)
 
+    @deprecated
     def get_albums(self, artist=None, limit=50, cacheable=True):
         """
         Returns a sequence of Album objects
@@ -2709,6 +2752,7 @@ class Library(_BaseObject):
 
         return seq
 
+    @deprecated
     def remove_scrobble(self, artist, title, timestamp):
         """Remove a scrobble from a user's Last.fm library. Parameters:
             artist (Required) : The artist that composed the track
@@ -2725,6 +2769,7 @@ class Library(_BaseObject):
         self._request(self.ws_prefix + ".removeScrobble", False, params)
 
 
+@deprecated_class
 class Playlist(_BaseObject):
     """A Last.fm user playlist."""
 
@@ -2905,6 +2950,7 @@ class Tag(_BaseObject, _Chartable):
 
         return self.name
 
+    @deprecated
     def get_similar(self):
         """Returns the tags similar to this one, ordered by similarity. """
 
@@ -3091,6 +3137,7 @@ class Track(_Opus):
             'artist': artist, 'title': title}
 
 
+@deprecated_class
 class Group(_BaseObject, _Chartable):
     """A Last.fm group."""
 
@@ -3145,6 +3192,7 @@ class Group(_BaseObject, _Chartable):
 
         return self.network._get_url(domain_name, "group") % {'name': name}
 
+    @deprecated
     def get_members(self, limit=50, cacheable=False):
         """
             Returns a sequence of User objects
@@ -3224,19 +3272,6 @@ class User(_BaseObject, _Chartable):
         self._recommended_events_index = 0
         self._recommended_artists_index = 0
 
-        if DEBUG:
-            # Testing if these are really no longer supported
-            # TODO: find a better place for this
-            gender = self._get_gender()
-            if gender in {MALE, FEMALE}:
-                raise Exception('{}: {} gender found'.format(self.name,
-                                                             gender))
-
-            age = self._get_age()
-            if age:
-                raise Exception('{}: {} age found'.format(self.name,
-                                                          age))
-
     def __repr__(self):
         return "pylast.User(%s, %s)" % (repr(self.name), repr(self.network))
 
@@ -3274,6 +3309,7 @@ class User(_BaseObject, _Chartable):
         return _extract(self._request(self.ws_prefix + '.getInfo', True),
                         'realname')
 
+    @deprecated
     def get_upcoming_events(self):
         """Returns all the upcoming events for this user."""
 
@@ -3360,10 +3396,8 @@ class User(_BaseObject, _Chartable):
 
         return seq
 
-    def get_neighbours(self):
-        raise DeprecationWarning('get_neighbours() is no longer supported')
-
-    def _get_neighbours(self, limit=50, cacheable=True):
+    @deprecated
+    def get_neighbours(self, limit=50, cacheable=True):
         """Returns a list of the user's friends."""
 
         params = self._get_params()
@@ -3381,6 +3415,7 @@ class User(_BaseObject, _Chartable):
 
         return seq
 
+    @deprecated
     def get_past_events(self, limit=50, cacheable=False):
         """
         Returns a sequence of Event objects
@@ -3515,22 +3550,16 @@ class User(_BaseObject, _Chartable):
         else:
             return Country(country, self.network)
 
+    @deprecated
     def get_age(self):
-        _deprecation_warning('get_age() is no longer supported')
-        return 0
-
-    def _get_age(self):
         """Returns the user's age."""
 
         doc = self._request(self.ws_prefix + ".getInfo", True)
 
         return _number(_extract(doc, "age"))
 
+    @deprecated
     def get_gender(self):
-        _deprecation_warning('get_gender() is no longer supported')
-        return None
-
-    def _get_gender(self):
         """Returns the user's gender. Either USER_MALE or USER_FEMALE."""
 
         doc = self._request(self.ws_prefix + ".getInfo", True)
@@ -3956,6 +3985,7 @@ class TrackSearch(_Search):
         return seq
 
 
+# @deprecated ?
 class VenueSearch(_Search):
     """
     Search for a venue by its name. If you don't want to narrow the results
@@ -4041,6 +4071,7 @@ class Venue(_BaseObject):
 
         return self.location
 
+    @deprecated
     def get_upcoming_events(self):
         """Returns the upcoming events in this venue."""
 
@@ -4048,6 +4079,7 @@ class Venue(_BaseObject):
 
         return _extract_events_from_doc(doc, self.network)
 
+    @deprecated
     def get_past_events(self):
         """Returns the past events held in this venue."""
 
