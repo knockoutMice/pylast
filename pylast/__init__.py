@@ -261,7 +261,7 @@ class _Network(object):
         self.proxy_enabled = False
         self.proxy = None
         self.last_call_time = 0
-        self.limit_rate = False
+        self.limit_rate = True
 
         # Load session_key from authentication token if provided
         if token and not self.session_key:
