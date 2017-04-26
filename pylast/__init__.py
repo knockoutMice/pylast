@@ -5,6 +5,7 @@
 #
 # Copyright 2008-2010 Amr Hassan
 # Copyright 2013-2017 hugovk
+# Copyright 2017 Mice Pápai
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,6 +22,7 @@
 # https://github.com/pylast/pylast
 
 import hashlib
+from functools import wraps
 from xml.dom import minidom, Node
 import xml.dom
 import time
@@ -32,15 +34,39 @@ import warnings
 import re
 import six
 
-__version__ = '1.8.0'
-__author__ = 'Amr Hassan, hugovk'
-__copyright__ = "Copyright (C) 2008-2010 Amr Hassan, 2013-2017 hugovk"
-__license__ = "apache2"
+__version__ = '1.8.4'
+__author__ = 'Amr Hassan, hugovk, Mice Pápai'
+__copyright__ = ('Copyright (C) 2008-2010 Amr Hassan, 2013-2017 hugovk, '
+                 '2017 Mice Pápai')
+__license__ = 'apache2'
 __email__ = 'amr.hassan@gmail.com'
+
+DEBUG = False
+
+if DEBUG:
+    warnings.simplefilter('always')
+else:
+    warnings.simplefilter('ignore')
 
 
 def _deprecation_warning(message):
     warnings.warn(message, DeprecationWarning)
+
+
+def deprecated(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        name = func.__name__
+        _deprecation_warning(f'{name} is no longer supported')
+        return func(*args, **kwargs)
+    return wrapper
+
+
+def deprecated_class(cls):
+    for attr in cls.__dict__:
+        if callable(getattr(cls, attr)):
+            setattr(cls, attr, deprecated(getattr(cls, attr)))
+    return cls
 
 
 def _can_use_ssl_securely():
@@ -90,16 +116,16 @@ STATUS_INVALID_SIGNATURE = 13
 STATUS_TOKEN_UNAUTHORIZED = 14
 STATUS_TOKEN_EXPIRED = 15
 
-EVENT_ATTENDING = '0'
-EVENT_MAYBE_ATTENDING = '1'
-EVENT_NOT_ATTENDING = '2'
+ATTENDING = '0'
+MAYBE_ATTENDING = '1'
+NOT_ATTENDING = '2'
 
-PERIOD_OVERALL = 'overall'
-PERIOD_7DAYS = '7day'
-PERIOD_1MONTH = '1month'
-PERIOD_3MONTHS = '3month'
-PERIOD_6MONTHS = '6month'
-PERIOD_12MONTHS = '12month'
+_OVERALL = 'overall'
+_7DAYS = '7day'
+_1MONTH = '1month'
+_3MONTHS = '3month'
+_6MONTHS = '6month'
+_12MONTHS = '12month'
 
 DOMAIN_ENGLISH = 0
 DOMAIN_GERMAN = 1
@@ -123,9 +149,8 @@ COVER_MEGA = 4
 IMAGES_ORDER_POPULARITY = "popularity"
 IMAGES_ORDER_DATE = "dateadded"
 
-
-USER_MALE = 'Male'
-USER_FEMALE = 'Female'
+MALE = 'Male'
+FEMALE = 'Female'
 
 SCROBBLE_SOURCE_USER = "P"
 SCROBBLE_SOURCE_NON_PERSONALIZED_BROADCAST = "R"
@@ -258,7 +283,7 @@ class _Network(object):
         self.proxy_enabled = False
         self.proxy = None
         self.last_call_time = 0
-        self.limit_rate = False
+        self.limit_rate = True
 
         # Load session_key from authentication token if provided
         if token and not self.session_key:
@@ -339,40 +364,6 @@ class _Network(object):
 
         return Tag(name, self)
 
-    def get_scrobbler(self, client_id, client_version):
-        """
-            Returns a Scrobbler object used for submitting tracks to the server
-
-            Quote from http://www.last.fm/api/submissions:
-            ========
-            Client identifiers are used to provide a centrally managed database
-            of the client versions, allowing clients to be banned if they are
-            found to be behaving undesirably. The client ID is associated with
-            a version number on the server, however these are only incremented
-            if a client is banned and do not have to reflect the version of the
-            actual client application.
-
-            During development, clients which have not been allocated an
-            identifier should use the identifier tst, with a version number of
-            1.0. Do not distribute code or client implementations which use
-            this test identifier. Do not use the identifiers used by other
-            clients.
-            =========
-
-            To obtain a new client identifier please contact:
-                * Last.fm: submissions@last.fm
-                * # TODO: list others
-
-            ...and provide us with the name of your client and its homepage
-            address.
-        """
-
-        _deprecation_warning(
-            "Use _Network.scrobble(...), _Network.scrobble_many(...),"
-            " and Network.update_now_playing(...) instead")
-
-        return Scrobbler(self, client_id, client_version)
-
     def _get_language_domain(self, domain_language):
         """
             Returns the mapped domain name of the network to a DOMAIN_* value
@@ -407,6 +398,7 @@ class _Network(object):
 
         self.last_call_time = now
 
+    @deprecated
     def create_new_playlist(self, title, description):
         """
             Creates a playlist for the authenticated user and returns it
@@ -472,6 +464,7 @@ class _Network(object):
 
         return seq
 
+    @deprecated
     def get_geo_events(
             self, longitude=None, latitude=None, location=None, distance=None,
             tag=None, festivalsonly=None, limit=None, cacheable=True):
@@ -516,6 +509,7 @@ class _Network(object):
 
         return _extract_events_from_doc(doc, self)
 
+    @deprecated
     def get_metro_weekly_chart_dates(self, cacheable=True):
         """
         Returns a list of From and To tuples for the available metro charts.
@@ -529,6 +523,7 @@ class _Network(object):
 
         return seq
 
+    @deprecated
     def get_metros(self, country=None, cacheable=True):
         """
         Get a list of valid countries and metros for use in the other
@@ -690,6 +685,7 @@ class _Network(object):
 
         return TrackSearch(artist_name, track_name, self)
 
+    @deprecated
     def search_for_venue(self, venue_name, country_name):
         """Searches of a venue by its name and its country. Set country_name to
         an empty string if not available.
@@ -837,6 +833,7 @@ class _Network(object):
         if remaining_tracks:
             self.scrobble_many(remaining_tracks)
 
+    @deprecated
     def get_play_links(self, link_type, things, cacheable=True):
         method = link_type + ".getPlaylinks"
         params = {}
@@ -861,12 +858,15 @@ class _Network(object):
 
         return seq
 
+    @deprecated
     def get_artist_play_links(self, artists, cacheable=True):
         return self.get_play_links("artist", artists, cacheable)
 
+    @deprecated
     def get_album_play_links(self, albums, cacheable=True):
         return self.get_play_links("album", albums, cacheable)
 
+    @deprecated
     def get_track_play_links(self, tracks, cacheable=True):
         return self.get_play_links("track", tracks, cacheable)
 
@@ -944,37 +944,6 @@ class LastFMNetwork(_Network):
              "'%s'" % self.password_hash)))
 
 
-def get_lastfm_network(
-        api_key="", api_secret="", session_key="", username="",
-        password_hash="", token=""):
-    """
-    Returns a preconfigured _Network object for Last.fm
-
-    api_key: a provided API_KEY
-    api_secret: a provided API_SECRET
-    session_key: a generated session_key or None
-    username: a username of a valid user
-    password_hash: the output of pylast.md5(password) where password is the
-        user's password
-    token: an authentication token to retrieve a session
-
-    if username and password_hash were provided and not session_key,
-    session_key will be generated automatically when needed.
-
-    Either a valid session_key, a combination of username and password_hash,
-    or token must be present for scrobbling.
-
-    Most read-only webservices only require an api_key and an api_secret, see
-    about obtaining them from:
-    http://www.last.fm/api/account
-    """
-
-    _deprecation_warning("Create a LastFMNetwork object instead")
-
-    return LastFMNetwork(
-        api_key, api_secret, session_key, username, password_hash, token)
-
-
 class LibreFMNetwork(_Network):
     """
     A preconfigured _Network object for Libre.fm
@@ -1041,30 +1010,6 @@ class LibreFMNetwork(_Network):
              "'%s'" % self.password_hash)))
 
 
-def get_librefm_network(
-        api_key="", api_secret="", session_key="", username="",
-        password_hash=""):
-    """
-    Returns a preconfigured _Network object for Libre.fm
-
-    api_key: a provided API_KEY
-    api_secret: a provided API_SECRET
-    session_key: a generated session_key or None
-    username: a username of a valid user
-    password_hash: the output of pylast.md5(password) where password is the
-        user's password
-
-    if username and password_hash were provided and not session_key,
-    session_key will be generated automatically when needed.
-    """
-
-    _deprecation_warning(
-        "DeprecationWarning: Create a LibreFMNetwork object instead")
-
-    return LibreFMNetwork(
-        api_key, api_secret, session_key, username, password_hash)
-
-
 class _ShelfCacheBackend(object):
     """Used as a backend for caching cacheable requests."""
     def __init__(self, file_path=None):
@@ -1086,8 +1031,8 @@ class _Request(object):
     def __init__(self, network, method_name, params={}):
 
         self.network = network
-        self.params = {}
 
+        self.params = {}
         for key in params:
             self.params[key] = _unicode(params[key])
 
@@ -1251,6 +1196,7 @@ class _Request(object):
             status = e.getAttribute('code')
             details = e.firstChild.data.strip()
             raise WSError(self.network, status, details)
+            # TODO: more useful error message (with request params)
 
 
 class SessionKeyGenerator(object):
@@ -1443,6 +1389,7 @@ class _BaseObject(object):
 
         return seq
 
+    @deprecated
     def get_top_fans(self, limit=None, cacheable=True):
         """Returns a list of the Users who played this the most.
         # Parameters:
@@ -1536,6 +1483,7 @@ class _BaseObject(object):
 
         return _extract(node, section)
 
+    @deprecated
     def get_shouts(self, limit=50, cacheable=False):
         """
             Returns a sequence of Shout objects
@@ -1582,6 +1530,7 @@ class _Chartable(object):
         """
         return self.get_weekly_charts("album", from_date, to_date)
 
+    # @deprecated
     def get_weekly_artist_charts(self, from_date=None, to_date=None):
         """
         Returns the weekly artist charts for the week starting from the
@@ -1933,6 +1882,7 @@ class Album(_Opus):
     def __init__(self, artist, title, network, username=None):
         super(Album, self).__init__(artist, title, network, "album", username)
 
+    @deprecated
     def get_release_date(self):
         """Returns the release date of the album."""
 
@@ -1958,7 +1908,7 @@ class Album(_Opus):
 
         return _extract_tracks(
             self._request(
-                self.ws_prefix + ".getInfo", cacheable=True), "tracks")
+                self.ws_prefix + ".getInfo", cacheable=True), self.network)
 
     def get_url(self, domain_name=DOMAIN_ENGLISH):
         """Returns the URL of the album or track page on the network.
@@ -2128,6 +2078,7 @@ class Artist(_BaseObject, _Taggable):
         """Returns the content of the artist's biography."""
         return self.get_bio("content", language)
 
+    @deprecated
     def get_upcoming_events(self):
         """Returns a list of the upcoming Events for this artist."""
 
@@ -2205,6 +2156,7 @@ class Artist(_BaseObject, _Taggable):
 
         self._request("artist.Shout", False, params)
 
+    @deprecated
     def get_band_members(self):
         """Returns a list of band members or None if unknown."""
 
@@ -2216,7 +2168,7 @@ class Artist(_BaseObject, _Taggable):
 
         return names
 
-
+@deprecated_class
 class Event(_BaseObject):
     """An event."""
 
@@ -2469,7 +2421,7 @@ class Country(_BaseObject):
         return self.network._get_url(
             domain_name, "country") % {'country_name': country_name}
 
-
+# @deprecated_class ?
 class Metro(_BaseObject):
     """A metro at Last.fm."""
 
@@ -2667,6 +2619,7 @@ class Library(_BaseObject):
 
         return self.user
 
+    @deprecated
     def add_album(self, album):
         """Add an album to this library."""
 
@@ -2676,6 +2629,7 @@ class Library(_BaseObject):
 
         self._request("library.addAlbum", False, params)
 
+    @deprecated
     def remove_album(self, album):
         """Remove an album from this library."""
 
@@ -2685,6 +2639,7 @@ class Library(_BaseObject):
 
         self._request(self.ws_prefix + ".removeAlbum", False, params)
 
+    @deprecated
     def add_artist(self, artist):
         """Add an artist to this library."""
 
@@ -2696,6 +2651,7 @@ class Library(_BaseObject):
 
         self._request(self.ws_prefix + ".addArtist", False, params)
 
+    @deprecated
     def remove_artist(self, artist):
         """Remove an artist from this library."""
 
@@ -2715,6 +2671,7 @@ class Library(_BaseObject):
 
         self._request(self.ws_prefix + ".addTrack", False, params)
 
+    @deprecated
     def get_albums(self, artist=None, limit=50, cacheable=True):
         """
         Returns a sequence of Album objects
@@ -2795,6 +2752,7 @@ class Library(_BaseObject):
 
         return seq
 
+    @deprecated
     def remove_scrobble(self, artist, title, timestamp):
         """Remove a scrobble from a user's Last.fm library. Parameters:
             artist (Required) : The artist that composed the track
@@ -2811,6 +2769,7 @@ class Library(_BaseObject):
         self._request(self.ws_prefix + ".removeScrobble", False, params)
 
 
+@deprecated_class
 class Playlist(_BaseObject):
     """A Last.fm user playlist."""
 
@@ -2991,6 +2950,7 @@ class Tag(_BaseObject, _Chartable):
 
         return self.name
 
+    @deprecated
     def get_similar(self):
         """Returns the tags similar to this one, ordered by similarity. """
 
@@ -3177,6 +3137,7 @@ class Track(_Opus):
             'artist': artist, 'title': title}
 
 
+@deprecated_class
 class Group(_BaseObject, _Chartable):
     """A Last.fm group."""
 
@@ -3231,6 +3192,7 @@ class Group(_BaseObject, _Chartable):
 
         return self.network._get_url(domain_name, "group") % {'name': name}
 
+    @deprecated
     def get_members(self, limit=50, cacheable=False):
         """
             Returns a sequence of User objects
@@ -3341,6 +3303,13 @@ class User(_BaseObject, _Chartable):
 
         return self.name
 
+    def get_real_name(self):
+        """Returns the user name."""
+
+        return _extract(self._request(self.ws_prefix + '.getInfo', True),
+                        'realname')
+
+    @deprecated
     def get_upcoming_events(self):
         """Returns all the upcoming events for this user."""
 
@@ -3427,6 +3396,7 @@ class User(_BaseObject, _Chartable):
 
         return seq
 
+    @deprecated
     def get_neighbours(self, limit=50, cacheable=True):
         """Returns a list of the user's friends."""
 
@@ -3445,6 +3415,7 @@ class User(_BaseObject, _Chartable):
 
         return seq
 
+    @deprecated
     def get_past_events(self, limit=50, cacheable=False):
         """
         Returns a sequence of Event objects
@@ -3579,6 +3550,7 @@ class User(_BaseObject, _Chartable):
         else:
             return Country(country, self.network)
 
+    @deprecated
     def get_age(self):
         """Returns the user's age."""
 
@@ -3586,17 +3558,21 @@ class User(_BaseObject, _Chartable):
 
         return _number(_extract(doc, "age"))
 
+    @deprecated
     def get_gender(self):
         """Returns the user's gender. Either USER_MALE or USER_FEMALE."""
 
         doc = self._request(self.ws_prefix + ".getInfo", True)
 
+        # debug
+        # print(doc.toprettyxml())
+
         value = _extract(doc, "gender")
 
         if value == 'm':
-            return USER_MALE
+            return MALE
         elif value == 'f':
-            return USER_FEMALE
+            return FEMALE
 
         return None
 
@@ -3665,7 +3641,7 @@ class User(_BaseObject, _Chartable):
         return _extract_tracks(doc, self.network)
 
     def get_top_albums(
-            self, period=PERIOD_OVERALL, limit=None, cacheable=True):
+            self, period=_OVERALL, limit=None, cacheable=True):
         """Returns the top albums played by a user.
         * period: The period of time. Possible values:
           o PERIOD_OVERALL
@@ -3686,7 +3662,7 @@ class User(_BaseObject, _Chartable):
 
         return _extract_top_albums(doc, self.network)
 
-    def get_top_artists(self, period=PERIOD_OVERALL, limit=None):
+    def get_top_artists(self, period=_OVERALL, limit=None):
         """Returns the top artists played by a user.
         * period: The period of time. Possible values:
           o PERIOD_OVERALL
@@ -3729,8 +3705,9 @@ class User(_BaseObject, _Chartable):
         return seq
 
     def get_top_tracks(
-            self, period=PERIOD_OVERALL, limit=None, cacheable=True):
-        """Returns the top tracks played by a user.
+            self, period=_OVERALL, limit=None, cacheable=True):
+        """
+        Returns the top tracks played by a user.
         * period: The period of time. Possible values:
           o PERIOD_OVERALL
           o PERIOD_7DAYS
@@ -3784,6 +3761,8 @@ class User(_BaseObject, _Chartable):
     def get_image(self):
         """Returns the user's avatar."""
 
+        # TODO: size parameter (small, medium, large, extralarge)
+
         doc = self._request(self.ws_prefix + ".getInfo", True)
 
         return _extract(doc, "image")
@@ -3832,8 +3811,13 @@ class AuthenticatedUser(User):
     def _get_params(self):
         return {"user": self.get_name()}
 
-    def get_name(self):
-        """Returns the name of the authenticated user."""
+    def get_name(self, properly_capitalized=False):
+        """
+        Returns the name of the authenticated user.
+        """
+
+        if self.name and not properly_capitalized:
+            return self.name
 
         doc = self._request("user.getInfo", True, {"user": ""})    # hack
 
@@ -4001,6 +3985,7 @@ class TrackSearch(_Search):
         return seq
 
 
+# @deprecated ?
 class VenueSearch(_Search):
     """
     Search for a venue by its name. If you don't want to narrow the results
@@ -4086,6 +4071,7 @@ class Venue(_BaseObject):
 
         return self.location
 
+    @deprecated
     def get_upcoming_events(self):
         """Returns the upcoming events in this venue."""
 
@@ -4093,6 +4079,7 @@ class Venue(_BaseObject):
 
         return _extract_events_from_doc(doc, self.network)
 
+    @deprecated
     def get_past_events(self):
         """Returns the past events held in this venue."""
 
@@ -4156,6 +4143,9 @@ def _collect_nodes(limit, sender, method_name, cacheable, params=None):
         doc = sender._request(method_name, cacheable, params)
         doc = cleanup_nodes(doc)
 
+        # break if there are no child nodes
+        if not doc.documentElement.childNodes:
+            break
         main = doc.documentElement.childNodes[0]
 
         if main.hasAttribute("totalPages"):
@@ -4444,171 +4434,5 @@ class _ScrobblerRequest(object):
             reason = status_line[status_line.find("FAILED ") + len("FAILED "):]
             raise ScrobblingError(reason)
 
-
-class Scrobbler(object):
-    """A class for scrobbling tracks to Last.fm"""
-
-    session_id = None
-    nowplaying_url = None
-    submissions_url = None
-
-    def __init__(self, network, client_id, client_version):
-        self.client_id = client_id
-        self.client_version = client_version
-        self.username = network.username
-        self.password = network.password_hash
-        self.network = network
-
-    def _do_handshake(self):
-        """Handshakes with the server"""
-
-        timestamp = str(int(time.time()))
-
-        if self.password and self.username:
-            token = md5(self.password + timestamp)
-        elif self.network.api_key and self.network.api_secret and \
-                self.network.session_key:
-            if not self.username:
-                self.username = self.network.get_authenticated_user()\
-                    .get_name()
-            token = md5(self.network.api_secret + timestamp)
-
-        params = {
-            "hs": "true", "p": "1.2.1", "c": self.client_id,
-            "v": self.client_version, "u": self.username, "t": timestamp,
-            "a": token}
-
-        if self.network.session_key and self.network.api_key:
-            params["sk"] = self.network.session_key
-            params["api_key"] = self.network.api_key
-
-        server = self.network.submission_server
-        response = _ScrobblerRequest(
-            server, params, self.network, "GET").execute().split("\n")
-
-        self.session_id = response[1]
-        self.nowplaying_url = response[2]
-        self.submissions_url = response[3]
-
-    def _get_session_id(self, new=False):
-        """
-        Returns a handshake. If new is true, then it will be requested from
-        the server even if one was cached.
-        """
-
-        if not self.session_id or new:
-            self._do_handshake()
-
-        return self.session_id
-
-    def report_now_playing(
-            self, artist, title, album="", duration="", track_number="",
-            mbid=""):
-
-        _deprecation_warning(
-            "DeprecationWarning: Use Network.update_now_playing(...) instead")
-
-        params = {
-            "s": self._get_session_id(), "a": artist, "t": title,
-            "b": album, "l": duration, "n": track_number, "m": mbid}
-
-        try:
-            _ScrobblerRequest(
-                self.nowplaying_url, params, self.network
-            ).execute()
-        except BadSessionError:
-            self._do_handshake()
-            self.report_now_playing(
-                artist, title, album, duration, track_number, mbid)
-
-    def scrobble(
-            self, artist, title, time_started, source, mode, duration,
-            album="", track_number="", mbid=""):
-        """Scrobble a track. parameters:
-            artist: Artist name.
-            title: Track title.
-            time_started: UTC timestamp of when the track started playing.
-            source: The source of the track
-                SCROBBLE_SOURCE_USER: Chosen by the user
-                    (the most common value, unless you have a reason for
-                    choosing otherwise, use this).
-                SCROBBLE_SOURCE_NON_PERSONALIZED_BROADCAST: Non-personalised
-                    broadcast (e.g. Shoutcast, BBC Radio 1).
-                SCROBBLE_SOURCE_PERSONALIZED_BROADCAST: Personalised
-                    recommendation except Last.fm (e.g. Pandora, Launchcast).
-                SCROBBLE_SOURCE_LASTFM: ast.fm (any mode). In this case, the
-                    5-digit recommendation_key value must be set.
-                SCROBBLE_SOURCE_UNKNOWN: Source unknown.
-            mode: The submission mode
-                SCROBBLE_MODE_PLAYED: The track was played.
-                SCROBBLE_MODE_LOVED: The user manually loved the track
-                    (implies a listen)
-                SCROBBLE_MODE_SKIPPED: The track was skipped
-                    (Only if source was Last.fm)
-                SCROBBLE_MODE_BANNED: The track was banned
-                    (Only if source was Last.fm)
-            duration: Track duration in seconds.
-            album: The album name.
-            track_number: The track number on the album.
-            mbid: MusicBrainz ID.
-        """
-
-        _deprecation_warning(
-            "DeprecationWarning: Use Network.scrobble(...) instead")
-
-        params = {
-            "s": self._get_session_id(),
-            "a[0]": _string(artist),
-            "t[0]": _string(title),
-            "i[0]": str(time_started),
-            "o[0]": source,
-            "r[0]": mode,
-            "l[0]": str(duration),
-            "b[0]": _string(album),
-            "n[0]": track_number,
-            "m[0]": mbid
-        }
-
-        _ScrobblerRequest(self.submissions_url, params, self.network).execute()
-
-    def scrobble_many(self, tracks):
-        """
-            Scrobble several tracks at once.
-
-            tracks: A sequence of a sequence of parameters for each track.
-                The order of parameters is the same as if passed to the
-                scrobble() method.
-        """
-
-        _deprecation_warning(
-            "DeprecationWarning: Use Network.scrobble_many(...) instead")
-
-        remainder = []
-
-        if len(tracks) > 50:
-            remainder = tracks[50:]
-            tracks = tracks[:50]
-
-        params = {"s": self._get_session_id()}
-
-        i = 0
-        for t in tracks:
-            _pad_list(t, 9, "")
-            params["a[%s]" % str(i)] = _string(t[0])
-            params["t[%s]" % str(i)] = _string(t[1])
-            params["i[%s]" % str(i)] = str(t[2])
-            params["o[%s]" % str(i)] = t[3]
-            params["r[%s]" % str(i)] = t[4]
-            params["l[%s]" % str(i)] = str(t[5])
-            params["b[%s]" % str(i)] = _string(t[6])
-            params["n[%s]" % str(i)] = t[7]
-            params["m[%s]" % str(i)] = t[8]
-
-            i += 1
-
-        _ScrobblerRequest(self.submissions_url, params, self.network).execute()
-
-        if remainder:
-            self.scrobble_many(remainder)
 
 # End of file
