@@ -1,24 +1,32 @@
 pyLast
 ======
 
-[![Build status](https://travis-ci.org/pylast/pylast.svg?branch=develop)](https://travis-ci.org/pylast/pylast) 
-[![PyPI version](https://img.shields.io/pypi/v/pylast.svg)](https://pypi.python.org/pypi/pylast/) 
-[![PyPI downloads](https://img.shields.io/pypi/dm/pylast.svg)](https://pypi.python.org/pypi/pylast/) 
-[![Coverage (Codecov)](https://codecov.io/gh/pylast/pylast/branch/develop/graph/badge.svg)](https://codecov.io/gh/pylast/pylast)
-[![Coverage (Coveralls)](https://coveralls.io/repos/github/pylast/pylast/badge.svg?branch=develop)](https://coveralls.io/github/pylast/pylast?branch=develop)
-[![Code health](https://landscape.io/github/pylast/pylast/develop/landscape.svg)](https://landscape.io/github/hugovk/pylast/develop)
+This is a fork
+--------------
 
+This repo is a fork of [pylast/pylast](https://github.com/pylast/pylast):
 
-A Python interface to [Last.fm](http://www.last.fm/) and other API-compatible websites such as [Libre.fm](http://libre.fm/).
+- Marked no longer supported (by Last.fm) functions with @deprecated
+- Updated the tests to ignore @deprecated and raise an Exception if an API method works again
+- Removed legacy functionality
+- Python3.6+
 
-Try using the pydoc utility for help on usage or see [test_pylast.py](tests/test_pylast.py) for examples.
+Contact: mice@gorbekor.hu
 
 Installation
 ------------
 
 Install via pip:
 
-    pip install pylast
+    pip install git+https://github.com/knockoutMice/pylast.git
+
+
+Original readme
+---------------
+
+A Python interface to [Last.fm](http://www.last.fm/) and other API-compatible websites such as [Libre.fm](http://libre.fm/).
+
+Try using the pydoc utility for help on usage or see [test_pylast.py](tests/test_pylast.py) for examples.
 
 
 Features
