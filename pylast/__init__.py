@@ -34,7 +34,7 @@ import warnings
 import re
 import six
 
-__version__ = '1.8.4'
+__version__ = '1.8.5'
 __author__ = 'Amr Hassan, hugovk, Mice Pápai'
 __copyright__ = ('Copyright (C) 2008-2010 Amr Hassan, 2013-2017 hugovk, '
                  '2017 Mice Pápai')
@@ -101,31 +101,19 @@ elif sys.version_info[0] == 2:
     from urllib import splithost as url_split_host
     from urllib import quote_plus as url_quote_plus
 
-STATUS_INVALID_SERVICE = 2
-STATUS_INVALID_METHOD = 3
-STATUS_AUTH_FAILED = 4
-STATUS_INVALID_FORMAT = 5
-STATUS_INVALID_PARAMS = 6
-STATUS_INVALID_RESOURCE = 7
-STATUS_TOKEN_ERROR = 8
-STATUS_INVALID_SK = 9
-STATUS_INVALID_API_KEY = 10
-STATUS_OFFLINE = 11
-STATUS_SUBSCRIBERS_ONLY = 12
-STATUS_INVALID_SIGNATURE = 13
-STATUS_TOKEN_UNAUTHORIZED = 14
-STATUS_TOKEN_EXPIRED = 15
-
 ATTENDING = '0'
 MAYBE_ATTENDING = '1'
 NOT_ATTENDING = '2'
 
-_OVERALL = 'overall'
-_7DAYS = '7day'
-_1MONTH = '1month'
-_3MONTHS = '3month'
-_6MONTHS = '6month'
-_12MONTHS = '12month'
+P_OA = 'overall'
+P_7D = '7day'
+P_1M = '1month'
+P_3M = '3month'
+P_6M = '6month'
+P_12M = '12month'
+
+(PERIOD_OVERALL, PERIOD_7DAYS, PERIOD_1MONTHS, PERIOD_3MONTHS, PERIOD_6MONTHS,
+ PERIOD_12MONTHS) = P_OA, P_7D, P_1M, P_3M, P_6M, P_12M
 
 DOMAIN_ENGLISH = 0
 DOMAIN_GERMAN = 1
@@ -146,22 +134,10 @@ COVER_LARGE = 2
 COVER_EXTRA_LARGE = 3
 COVER_MEGA = 4
 
-IMAGES_ORDER_POPULARITY = "popularity"
-IMAGES_ORDER_DATE = "dateadded"
-
 MALE = 'Male'
 FEMALE = 'Female'
+NO_GENDER = 'No gender'
 
-SCROBBLE_SOURCE_USER = "P"
-SCROBBLE_SOURCE_NON_PERSONALIZED_BROADCAST = "R"
-SCROBBLE_SOURCE_PERSONALIZED_BROADCAST = "E"
-SCROBBLE_SOURCE_LASTFM = "L"
-SCROBBLE_SOURCE_UNKNOWN = "U"
-
-SCROBBLE_MODE_PLAYED = ""
-SCROBBLE_MODE_LOVED = "L"
-SCROBBLE_MODE_BANNED = "B"
-SCROBBLE_MODE_SKIPPED = "S"
 
 # From http://boodebr.org/main/python/all-about-python-and-unicode#UNI_XML
 RE_XML_ILLEGAL = (u'([\u0000-\u0008\u000b-\u000c\u000e-\u001f\ufffe-\uffff])' +
@@ -1117,9 +1093,9 @@ class _Request(object):
         data = '&'.join(data)
 
         headers = {
-            "Content-type": "application/x-www-form-urlencoded",
+            'Content-type': 'application/x-www-form-urlencoded',
             'Accept-Charset': 'utf-8',
-            'User-Agent': "pylast" + '/' + __version__
+            'User-Agent': f'pylast/{__version__}'
         }
 
         (HOST_NAME, HOST_SUBDIR) = self.network.ws_server
@@ -1136,9 +1112,9 @@ class _Request(object):
                     port=self.network._get_proxy()[1])
 
             try:
+                url = 'http://' + HOST_NAME + HOST_SUBDIR
                 conn.request(
-                    method='POST', url="http://" + HOST_NAME + HOST_SUBDIR,
-                    body=data, headers=headers)
+                    method='POST', url=url, body=data, headers=headers)
             except Exception as e:
                 raise NetworkError(self.network, e)
 
@@ -1167,6 +1143,7 @@ class _Request(object):
         response_text = XML_ILLEGAL.sub("?", response_text)
 
         self._check_response_for_errors(response_text)
+        conn.close()
         return response_text
 
     def execute(self, cacheable=False):
@@ -1706,6 +1683,7 @@ class WSError(Exception):
         return self.details
 
     def get_id(self):
+        # TODO: return status message based on these
         """Returns the exception ID, from one of the following:
             STATUS_INVALID_SERVICE = 2
             STATUS_INVALID_METHOD = 3
@@ -3560,7 +3538,7 @@ class User(_BaseObject, _Chartable):
 
     @deprecated
     def get_gender(self):
-        """Returns the user's gender. Either USER_MALE or USER_FEMALE."""
+        """Returns the user's gender. Either MALE, FEMALE or NO_GENDER."""
 
         doc = self._request(self.ws_prefix + ".getInfo", True)
 
@@ -3573,6 +3551,8 @@ class User(_BaseObject, _Chartable):
             return MALE
         elif value == 'f':
             return FEMALE
+        elif value == 'n':
+            return NO_GENDER
 
         return None
 
@@ -3641,7 +3621,7 @@ class User(_BaseObject, _Chartable):
         return _extract_tracks(doc, self.network)
 
     def get_top_albums(
-            self, period=_OVERALL, limit=None, cacheable=True):
+            self, period=P_OA, limit=None, cacheable=True):
         """Returns the top albums played by a user.
         * period: The period of time. Possible values:
           o PERIOD_OVERALL
@@ -3662,7 +3642,7 @@ class User(_BaseObject, _Chartable):
 
         return _extract_top_albums(doc, self.network)
 
-    def get_top_artists(self, period=_OVERALL, limit=None):
+    def get_top_artists(self, period=P_OA, limit=None):
         """Returns the top artists played by a user.
         * period: The period of time. Possible values:
           o PERIOD_OVERALL
@@ -3705,7 +3685,7 @@ class User(_BaseObject, _Chartable):
         return seq
 
     def get_top_tracks(
-            self, period=_OVERALL, limit=None, cacheable=True):
+            self, period=P_OA, limit=None, cacheable=True):
         """
         Returns the top tracks played by a user.
         * period: The period of time. Possible values:
@@ -4394,10 +4374,10 @@ class _ScrobblerRequest(object):
         data = "&".join(data)
 
         headers = {
-            "Content-type": "application/x-www-form-urlencoded",
-            "Accept-Charset": "utf-8",
-            "User-Agent": "pylast" + "/" + __version__,
-            "HOST": self.hostname
+            'Content-type': 'application/x-www-form-urlencoded',
+            'Accept-Charset': 'utf-8',
+            'User-Agent': f'pylast/{__version__}',
+            'HOST': self.hostname
         }
 
         if self.type == "GET":
