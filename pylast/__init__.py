@@ -34,19 +34,12 @@ import warnings
 import re
 import six
 
-__version__ = '1.8.5'
+__version__ = '1.8.6'
 __author__ = 'Amr Hassan, hugovk, Mice Pápai'
 __copyright__ = ('Copyright (C) 2008-2010 Amr Hassan, 2013-2017 hugovk, '
                  '2017 Mice Pápai')
 __license__ = 'apache2'
 __email__ = 'amr.hassan@gmail.com'
-
-DEBUG = False
-
-if DEBUG:
-    warnings.simplefilter('always')
-else:
-    warnings.simplefilter('ignore')
 
 
 def _deprecation_warning(message):
@@ -214,7 +207,7 @@ class _Network(object):
     def __init__(
             self, name, homepage, ws_server, api_key, api_secret, session_key,
             submission_server, username, password_hash, domain_names, urls,
-            token=None):
+            token=None, debug=False):
         """
             name: the name of the network
             homepage: the homepage URL
@@ -231,6 +224,7 @@ class _Network(object):
                 name
             urls: a dict mapping types to URLs
             token: an authentication token to retrieve a session
+            debug: bool, enables printing of warnings
 
             if username and password_hash were provided and not session_key,
             session_key will be generated automatically when needed.
@@ -273,6 +267,11 @@ class _Network(object):
             sk_gen = SessionKeyGenerator(self)
             self.session_key = sk_gen.get_session_key(
                 self.username, self.password_hash)
+
+        if debug:
+            warnings.simplefilter('always')
+        else:
+            warnings.simplefilter('ignore')
 
     def __str__(self):
         return "%s Network" % self.name
@@ -440,6 +439,7 @@ class _Network(object):
 
         return seq
 
+    # TODO: rename "festivalsonly"
     @deprecated
     def get_geo_events(
             self, longitude=None, latitude=None, location=None, distance=None,
@@ -680,7 +680,7 @@ class _Network(object):
         return Track(_extract(doc, "name", 1), _extract(doc, "name"), self)
 
     def get_artist_by_mbid(self, mbid):
-        """Loooks up an artist by its MusicBrainz ID"""
+        """Looks up an artist by its MusicBrainz ID"""
 
         params = {"mbid": mbid}
 
@@ -908,7 +908,8 @@ class LastFMNetwork(_Network):
                 "track": "music/%(artist)s/_/%(title)s",
                 "group": "group/%(name)s",
                 "user": "user/%(name)s",
-            }
+            },
+            debug=False
         )
 
     def __repr__(self):
@@ -1296,9 +1297,9 @@ Shout = collections.namedtuple(
     "Shout", ["body", "author", "date"])
 
 
-def _string_output(funct):
+def _string_output(func):
     def r(*args):
-        return _string(funct(*args))
+        return _string(func(*args))
 
     return r
 
@@ -1402,20 +1403,20 @@ class _BaseObject(object):
         """
 
         # Last.fm currently accepts a max of 10 recipient at a time
-        while(len(users) > 10):
+        while len(users) > 10:
             section = users[0:9]
             users = users[9:]
             self.share(section, message)
 
-        nusers = []
+        user_names = []
         for user in users:
             if isinstance(user, User):
-                nusers.append(user.get_name())
+                user_names.append(user.get_name())
             else:
-                nusers.append(user)
+                user_names.append(user)
 
         params = self._get_params()
-        recipients = ','.join(nusers)
+        recipients = ','.join(user_names)
         params['recipient'] = recipients
         if message:
             params['message'] = message
@@ -1813,6 +1814,7 @@ class _Opus(_BaseObject, _Taggable):
             self._request(
                 self.ws_prefix + ".getInfo", cacheable=True), "playcount"))
 
+    # TODO: rename
     def get_userplaycount(self):
         """Returns the number of plays by a given username"""
 
@@ -1864,10 +1866,11 @@ class Album(_Opus):
     def get_release_date(self):
         """Returns the release date of the album."""
 
+        # TODO: valid?
         return _extract(self._request(
             self.ws_prefix + ".getInfo", cacheable=True), "releasedate")
 
-    def get_cover_image(self, size=COVER_EXTRA_LARGE):
+    def get_cover_image(self, size=COVER_MEGA):
         """
         Returns a uri to the cover image
         size can be one of:
@@ -1994,6 +1997,7 @@ class Artist(_BaseObject, _Taggable):
         return _number(_extract(
             self._request(self.ws_prefix + ".getInfo", True), "playcount"))
 
+    # TODO: rename, check if used, move to User
     def get_userplaycount(self):
         """Returns the number of plays by a given username"""
 
@@ -2134,6 +2138,7 @@ class Artist(_BaseObject, _Taggable):
 
         self._request("artist.Shout", False, params)
 
+    # TODO: rename
     @deprecated
     def get_band_members(self):
         """Returns a list of band members or None if unknown."""
@@ -2942,7 +2947,7 @@ class Tag(_BaseObject, _Chartable):
         return seq
 
     def get_top_albums(self, limit=None, cacheable=True):
-        """Retuns a list of the top albums."""
+        """Returns a list of the top albums."""
         params = self._get_params()
         if limit:
             params['limit'] = limit
@@ -3016,6 +3021,7 @@ class Track(_Opus):
 
         return _number(_extract(doc, "duration"))
 
+    # TODO: rename
     def get_userloved(self):
         """Whether the user loved this track"""
 
@@ -3035,8 +3041,9 @@ class Track(_Opus):
         doc = self._request(self.ws_prefix + ".getInfo", True)
         return _extract(doc, "streamable") == "1"
 
+    # TODO: rename, check if used, move to Track
     def is_fulltrack_available(self):
-        """Returns True if the fulltrack is available for streaming."""
+        """Returns True if the full track is available for streaming."""
 
         doc = self._request(self.ws_prefix + ".getInfo", True)
         return doc.getElementsByTagName(
@@ -3301,7 +3308,7 @@ class User(_BaseObject, _Chartable):
         including scrobble time.
         """
         # Not implemented:
-        # "Can be limited to specific timeranges, defaults to all time."
+        # "Can be limited to specific time ranges, defaults to all time."
 
         params = self._get_params()
         params['artist'] = artist
@@ -4008,10 +4015,10 @@ class Venue(_BaseObject):
 
     __hash__ = _BaseObject.__hash__
 
-    def __init__(self, netword_id, network, venue_element=None):
+    def __init__(self, network_id, network, venue_element=None):
         _BaseObject.__init__(self, network, "venue")
 
-        self.id = _number(netword_id)
+        self.id = _number(network_id)
         if venue_element is not None:
             self.info = _extract_element_tree(venue_element)
             self.name = self.info.get('name')
@@ -4296,14 +4303,14 @@ def _unescape_htmlentity(string):
     return string
 
 
-def extract_items(topitems_or_libraryitems):
+def extract_items(top_items_or_library_items):
     """
     Extracts a sequence of items from a sequence of TopItem or
     LibraryItem objects.
     """
 
     seq = []
-    for i in topitems_or_libraryitems:
+    for i in top_items_or_library_items:
         seq.append(i.item)
 
     return seq
