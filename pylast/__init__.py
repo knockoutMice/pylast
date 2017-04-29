@@ -35,7 +35,7 @@ import warnings
 import re
 import six
 
-__version__ = '1.8.7'
+__version__ = '1.8.8'
 __author__ = 'Amr Hassan, hugovk, Mice Pápai'
 __copyright__ = ('Copyright (C) 2008-2010 Amr Hassan, 2013-2017 hugovk, '
                  '2017 Mice Pápai')
@@ -1340,9 +1340,9 @@ class _BaseObject(object):
         # Convert any ints (or whatever) into strings
         values = map(six.text_type, self._get_params().values())
 
-        return hash(self.network) + hash(six.text_type(type(self)) + "".join(
+        return hash(self.network) + hash(six.text_type(type(self)) + ''.join(
             list(self._get_params().keys()) + list(values)
-        ).lower())
+        ).casefold())
 
     def _extract_cdata_from_request(self, method_name, tag_name, params):
         doc = self._request(method_name, True, params)
@@ -1544,7 +1544,7 @@ class _Chartable(object):
             self.ws_prefix + method, True, params)
 
         seq = []
-        for node in doc.getElementsByTagName(chart_kind.lower()):
+        for node in doc.getElementsByTagName(chart_kind.casefold()):
             item = chart_type(
                 _extract(node, "artist"), _extract(node, "name"), self.network)
             weight = _number(_extract(node, "playcount"))
@@ -1634,11 +1634,11 @@ class _Taggable(object):
         tags_on_server = self.get_tags()
 
         for tag in tags_on_server:
-            c_old_tags.append(tag.get_name().lower())
+            c_old_tags.append(tag.get_name().casefold())
             old_tags.append(tag.get_name())
 
         for tag in tags:
-            c_new_tags.append(tag.lower())
+            c_new_tags.append(tag.casefold())
             new_tags.append(tag)
 
         for i in range(0, len(old_tags)):
@@ -1770,10 +1770,10 @@ class _Opus(_BaseObject, _Taggable):
     def __eq__(self, other):
         if type(self) != type(other):
             return False
-        a = self.get_title().lower()
-        b = other.get_title().lower()
-        c = self.get_artist().get_name().lower()
-        d = other.get_artist().get_name().lower()
+        a = self.get_title().casefold()
+        b = other.get_title().casefold()
+        c = self.get_artist().get_name().casefold()
+        d = other.get_artist().get_name().casefold()
         return (a == b) and (c == d)
 
     def __ne__(self, other):
@@ -1952,7 +1952,7 @@ class Artist(_BaseObject, _Taggable):
 
     def __eq__(self, other):
         if type(self) is type(other):
-            return self.get_name().lower() == other.get_name().lower()
+            return self.get_name().casefold() == other.get_name().casefold()
         else:
             return False
 
@@ -2343,7 +2343,7 @@ class Country(_BaseObject):
         return self.get_name()
 
     def __eq__(self, other):
-        return self.get_name().lower() == other.get_name().lower()
+        return self.get_name().casefold() == other.get_name().casefold()
 
     def __ne__(self, other):
         return self.get_name() != other.get_name()
@@ -2403,6 +2403,7 @@ class Country(_BaseObject):
         return self.network._get_url(
             domain_name, "country") % {'country_name': country_name}
 
+
 # @deprecated_class ?
 class Metro(_BaseObject):
     """A metro at Last.fm."""
@@ -2427,12 +2428,12 @@ class Metro(_BaseObject):
         return self.get_name() + ", " + self.get_country()
 
     def __eq__(self, other):
-        return (self.get_name().lower() == other.get_name().lower() and
-                self.get_country().lower() == other.get_country().lower())
+        return (self.get_name().casefold() == other.get_name().casefold() and
+                self.get_country().casefold() == other.get_country().casefold())
 
     def __ne__(self, other):
         return (self.get_name() != other.get_name() or
-                self.get_country().lower() != other.get_country().lower())
+                self.get_country().casefold() != other.get_country().casefold())
 
     def _get_params(self):
         return {'metro': self.get_name(), 'country': self.get_country()}
@@ -2915,10 +2916,10 @@ class Tag(_BaseObject, _Chartable):
         return self.get_name()
 
     def __eq__(self, other):
-        return self.get_name().lower() == other.get_name().lower()
+        return self.get_name().casefold() == other.get_name().casefold()
 
     def __ne__(self, other):
-        return self.get_name().lower() != other.get_name().lower()
+        return self.get_name().casefold() != other.get_name().casefold()
 
     def _get_params(self):
         return {self.ws_prefix: self.get_name()}
@@ -3143,7 +3144,7 @@ class Group(_BaseObject, _Chartable):
         return self.get_name()
 
     def __eq__(self, other):
-        return self.get_name().lower() == other.get_name().lower()
+        return self.get_name().casefold() == other.get_name().casefold()
 
     def __ne__(self, other):
         return self.get_name() != other.get_name()
@@ -4271,7 +4272,7 @@ def _extract_events_from_doc(doc, network):
 def _url_safe(text):
     """Does all kinds of tricks on a text to make it safe to use in a url."""
 
-    return url_quote_plus(url_quote_plus(_string(text))).lower()
+    return url_quote_plus(url_quote_plus(_string(text))).casefold()
 
 
 def _number(string):
