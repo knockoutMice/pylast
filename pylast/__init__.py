@@ -23,6 +23,7 @@
 
 import hashlib
 from functools import wraps
+from typing import Dict
 from xml.dom import minidom, Node
 import xml.dom
 import time
@@ -34,7 +35,7 @@ import warnings
 import re
 import six
 
-__version__ = '1.8.6'
+__version__ = '1.8.7'
 __author__ = 'Amr Hassan, hugovk, Mice Pápai'
 __copyright__ = ('Copyright (C) 2008-2010 Amr Hassan, 2013-2017 hugovk, '
                  '2017 Mice Pápai')
@@ -381,9 +382,8 @@ class _Network(object):
                 description: The description of the new playlist.
         """
 
-        params = {}
-        params['title'] = title
-        params['description'] = description
+        params = {'title':       title,
+                  'description': description}
 
         doc = _Request(self, 'playlist.create', params).execute(False)
 
@@ -871,7 +871,7 @@ class LastFMNetwork(_Network):
 
     def __init__(
             self, api_key="", api_secret="", session_key="", username="",
-            password_hash="", token=""):
+            password_hash="", token="", debug=False):
         _Network.__init__(
             self,
             name="Last.fm",
@@ -909,7 +909,7 @@ class LastFMNetwork(_Network):
                 "group": "group/%(name)s",
                 "user": "user/%(name)s",
             },
-            debug=False
+            debug=debug
         )
 
     def __repr__(self):
@@ -1005,13 +1005,14 @@ class _ShelfCacheBackend(object):
 class _Request(object):
     """Representing an abstract web service operation."""
 
-    def __init__(self, network, method_name, params={}):
+    def __init__(self, network, method_name, params: Dict = None):
 
         self.network = network
 
         self.params = {}
-        for key in params:
-            self.params[key] = _unicode(params[key])
+        if params:
+            for key in params:
+                self.params[key] = _unicode(params[key])
 
         (self.api_key, self.api_secret, self.session_key) = \
             network._get_ws_auth()
@@ -1065,7 +1066,7 @@ class _Request(object):
             if key != "api_sig" and key != "api_key" and key != "sk":
                 cache_key += key + self.params[key]
 
-        return hashlib.sha1(cache_key.encode("utf-8")).hexdigest()
+        return hashlib.sha1(cache_key.encode()).hexdigest()
 
     def _get_cached_response(self):
         """Returns a file object of the cached response."""
@@ -1926,7 +1927,8 @@ class Artist(_BaseObject, _Taggable):
     __hash__ = _BaseObject.__hash__
 
     def __init__(self, name, network, username=None):
-        """Create an artist object.
+        """
+        Create an artist object.
         # Parameters:
             * name str: The artist's name.
         """
@@ -2020,12 +2022,9 @@ class Artist(_BaseObject, _Taggable):
     def get_listener_count(self):
         """Returns the number of listeners on the network."""
 
-        if hasattr(self, "listener_count"):
-            return self.listener_count
-        else:
-            self.listener_count = _number(_extract(
-                self._request(self.ws_prefix + ".getInfo", True), "listeners"))
-            return self.listener_count
+        return _number(_extract(self._request(self.ws_prefix + '.getInfo',
+                                              cacheable=True),
+                                'listeners'))
 
     def is_streamable(self):
         """Returns True if the artist is streamable."""
