@@ -35,7 +35,7 @@ import warnings
 import re
 import six
 
-__version__ = '1.8.8'
+__version__ = '1.8.9'
 __author__ = 'Amr Hassan, hugovk, Mice Pápai'
 __copyright__ = ('Copyright (C) 2008-2010 Amr Hassan, 2013-2017 hugovk, '
                  '2017 Mice Pápai')
@@ -364,13 +364,13 @@ class _Network(object):
         """
 
         # Delay time in seconds from section 4.4 of http://www.last.fm/api/tos
-        DELAY_TIME = 0.2
+        delay_time = 0.2
         now = time.time()
 
         time_since_last = now - self.last_call_time
 
-        if time_since_last < DELAY_TIME:
-            time.sleep(DELAY_TIME - time_since_last)
+        if time_since_last < delay_time:
+            time.sleep(delay_time - time_since_last)
 
         self.last_call_time = now
 
@@ -1848,7 +1848,8 @@ class _Opus(_BaseObject, _Taggable):
         except StopIteration:
             return None
 
-    def _get_children_by_tag_name(self, node, tag_name):
+    @staticmethod
+    def _get_children_by_tag_name(node, tag_name):
         for child in node.childNodes:
             if (child.nodeType == child.ELEMENT_NODE and
                (tag_name == '*' or child.tagName == tag_name)):
@@ -2150,6 +2151,7 @@ class Artist(_BaseObject, _Taggable):
 
         return names
 
+
 @deprecated_class
 class Event(_BaseObject):
     """An event."""
@@ -2351,14 +2353,17 @@ class Country(_BaseObject):
     def _get_params(self):  # TODO can move to _BaseObject
         return {'country': self.get_name()}
 
-    def _get_name_from_code(self, alpha2code):
+    # def _get_name_from_code(self, alpha2code):
         # TODO: Have this function lookup the alpha-2 code and return the
         # country name.
 
-        return alpha2code
+        # TODO: add pycountry as requirement and:
+        # pycountry.countries.get(alpha_2=alpha2code)
+
+        # return alpha2code
 
     def get_name(self):
-        """Returns the country name. """
+        """Returns the country name."""
 
         return self.name
 
@@ -2425,18 +2430,18 @@ class Metro(_BaseObject):
 
     @_string_output
     def __str__(self):
-        return self.get_name() + ", " + self.get_country()
+        return self.name + ", " + self.country
 
     def __eq__(self, other):
-        return (self.get_name().casefold() == other.get_name().casefold() and
-                self.get_country().casefold() == other.get_country().casefold())
+        return (self.name.casefold() == other.name.casefold() and
+                self.country.casefold() == other.country.casefold())
 
     def __ne__(self, other):
-        return (self.get_name() != other.get_name() or
-                self.get_country().casefold() != other.get_country().casefold())
+        return (self.name != other.name or
+                self.country.casefold() != other.country.casefold())
 
     def _get_params(self):
-        return {'metro': self.get_name(), 'country': self.get_country()}
+        return {'metro': self.name, 'country': self.country}
 
     def get_name(self):
         """Returns the metro name."""
@@ -4019,7 +4024,7 @@ class Venue(_BaseObject):
         _BaseObject.__init__(self, network, "venue")
 
         self.id = _number(network_id)
-        if venue_element is not None:
+        if venue_element:
             self.info = _extract_element_tree(venue_element)
             self.name = self.info.get('name')
             self.url = self.info.get('url')
@@ -4173,27 +4178,27 @@ def _extract_element_tree(node):
     NB: If any elements have text nodes as well as nested
     elements this will ignore the text nodes"""
 
-    def _recurse_build_tree(rootNode, targetDict):
+    def _recurse_build_tree(root_node, target_dict):
         """Recursively build a multi-level dict"""
 
-        def _has_child_elements(rootNode):
+        def _has_child_elements(root_node):
             """Check if an element has any nested (child) elements"""
 
-            for node in rootNode.childNodes:
+            for node in root_node.childNodes:
                 if node.nodeType == node.ELEMENT_NODE:
                     return True
             return False
 
-        for node in rootNode.childNodes:
+        for node in root_node.childNodes:
             if node.nodeType == node.ELEMENT_NODE:
                 if _has_child_elements(node):
-                    targetDict[node.tagName] = {}
-                    _recurse_build_tree(node, targetDict[node.tagName])
+                    target_dict[node.tagName] = {}
+                    _recurse_build_tree(node, target_dict[node.tagName])
                 else:
                     val = None if node.firstChild is None else \
                         _unescape_htmlentity(node.firstChild.data.strip())
-                    targetDict[node.tagName] = val
-        return targetDict
+                    target_dict[node.tagName] = val
+        return target_dict
 
     return _recurse_build_tree(node, {})
 
@@ -4398,7 +4403,8 @@ class _ScrobblerRequest(object):
 
         return response
 
-    def _check_response_for_errors(self, response):
+    @staticmethod
+    def _check_response_for_errors(response):
         """
         When passed a string response it checks for errors, raising any
         exceptions as necessary.
