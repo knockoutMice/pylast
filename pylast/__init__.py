@@ -35,7 +35,7 @@ import warnings
 import re
 import six
 
-__version__ = '1.8.9'
+__version__ = '1.8.10'
 __author__ = 'Amr Hassan, hugovk, Mice Pápai'
 __copyright__ = ('Copyright (C) 2008-2010 Amr Hassan, 2013-2017 hugovk, '
                  '2017 Mice Pápai')
@@ -992,6 +992,10 @@ class _ShelfCacheBackend(object):
     def __init__(self, file_path=None):
         self.shelf = shelve.open(file_path)
 
+        self.cache_keys = set(self.shelf.keys())
+    def __contains__(self, key):
+        return key in self.cache_keys
+
     def __iter__(self):
         return iter(self.shelf.keys())
 
@@ -999,6 +1003,7 @@ class _ShelfCacheBackend(object):
         return self.shelf[key]
 
     def set_xml(self, key, xml_string):
+        self.cache_keys.add(key)
         self.shelf[key] = xml_string
 
 
